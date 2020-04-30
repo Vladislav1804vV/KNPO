@@ -115,11 +115,13 @@ QList <HANDLE> openAllFiles(QString Filename)
         ReadFile(myFile, str, size, NULL, NULL);
         //Разбить строку по символу переноса новой строки
         QString string = QString::fromUtf8(str);
-        QStringList list = string.split("\r\n");
+        QStringList list = string.split("\n");
+        for(int i = 0; i < list.size(); i++) //Для каждой строки файла удалить лишние белые разделители
+            list[i] = list[i].simplified();
         //Удалить пустые строки
         list.removeAll("");
         for(int i = 0; i < list.size(); i++)    //Для каждого пути получить его абсолютный путь
-            list[i] = absolutePath(list[i]).simplified();
+            list[i] = absolutePath(list[i]);
         //Удалить одинаковые пути
         list.removeDuplicates();
         //Получить дескрипторы всех файлов по заданным путям
@@ -249,7 +251,7 @@ QStringList fileToStringList(HANDLE handle)
     ReadFile(handle, str, size, NULL, NULL);
     //Разбить строку по символу переноса новой строки
     QString string = QString::fromUtf8(str);
-    QStringList list = string.split("\r\n");
+    QStringList list = string.split("\n");
     for(int i = 0; i < list.size(); i++) //Для каждой строки файла удалить лишние белые разделители
         list[i] = list[i].simplified();
     //Удалить пустые строки
