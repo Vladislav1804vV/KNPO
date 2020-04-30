@@ -90,13 +90,14 @@ bool thingInRoundBrackets(QStringList list, int index, int position);
 */
 void deleteAnnotations(QList <QStringList> &list);
 
-/* Найти конец блока от заданного места
+/* Найти конечный символ от заданного места
  * param [in] list массив, содержащий строки кода заданного файла на языке Java
  * param [in] startPosition индекс строки кода, от которой начинать поиск
  * param [in] indexBrace позиция символа в заданной строке кода, от которой начинать поиск
- * return массив, содержащий индекс строки и позиции найденного конеца блока
+ * param [in] closeSymbol конечный символ
+ * return массив, содержащий индекс строки и позиции найденного конечного символа
 */
-QList <int> findEndBlock(QStringList list, int startPosition, int indexBrace);
+QList <int> findClosingSymbol(QStringList list, int startPosition, int indexBrace, QChar closeSymbol);
 
 /* Привести заданный код к структурному виду
  * param [in,out] список массивов, содержащих строки кода каждого файла на языке Java
