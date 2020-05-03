@@ -20,22 +20,22 @@ using namespace std;
 void JavaParssing(const char *fileName);
 
 /* Открыть заданный файл
- * param [in] Filename имя заданного файла
+ * param [in] fileName имя заданного файла
  * return дескриптор открытого файла
 */
-HANDLE openFile(QString Filename);
+HANDLE openFile(QString fileName);
 
 /* Открыть файлы, содержащиеся в списке путей к файлам программы на языке Java
- * Filename [in] Filename имя файла, содержащего список путей к файлам программы на языке Java
- * return список декскрипторов открытых файлов
+ * param [in] fileName имя файла, содержащего список путей к файлам программы на языке Java
+ * return список дескрипторов открытых файлов
 */
-QList <HANDLE> openAllFiles(QString Filename);
+QList <HANDLE> openAllFiles(QString fileName);
 
 /* Получить абсолютный путь файла
- * param [in] Filename имя заданного файла
+ * param [in] fileName имя заданного файла
  * return абсолютный путь заданного файла
 */
-QString absolutePath(QString Filename);
+QString absolutePath(QString fileName);
 
 /* Обработка текстовых ошибок с последующим завершением работы программы
  * param [in] message текст заданной ошибки
@@ -100,7 +100,7 @@ void deleteAnnotations(QList <QStringList> &list);
 QList <int> findClosingSymbol(QStringList list, int startPosition, int indexBrace, QChar closeSymbol);
 
 /* Привести заданный код к структурному виду
- * param [in,out] список массивов, содержащих строки кода каждого файла на языке Java
+ * param [in,out] list список массивов, содержащих строки кода каждого файла на языке Java
 */
 void structuralViewOfCode(QList <QStringList> &list);
 
