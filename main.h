@@ -59,10 +59,10 @@ void sameProject(QStringList listFiles);
 QStringList fileToStringList(HANDLE handle);
 
 /* Открыть файлы на языке Java
- * param [in] list_handle список дескрипторов открытых файлов
+ * param [in] listHandle список дескрипторов открытых файлов
  * return список массивов, содержащих строки кода каждого файла на языке Java
 */
-QList <QStringList> getFilesArray(QList <HANDLE> list_handle);
+QList <QStringList> getFilesArray(QList <HANDLE> listHandle);
 
 /* Проверка на включение в строковую константу от заданного места
  * param [in] list массив, содержащий строки кода заданного файла на языке Java
