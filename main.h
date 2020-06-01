@@ -14,6 +14,39 @@
 
 using namespace std;
 
+struct dataWrittenField
+{
+    QString nameField;
+    QString typeField;
+    QString accessModifier;
+    QStringList otherModifier;
+    QString valueField;
+};
+
+struct dataWrittenMethod
+{
+    QString nameMethod;
+    QString typeMethod;
+    QString accessModifier;
+    QStringList otherModifier;
+    QStringList parameters;
+    QString throwsValue;
+    QString valueMethod;
+    bool isInitializationBlock = false;
+    QString typeInitializationBlock;
+    QString valueInitializationBlock;
+};
+
+struct dataWrittenClass
+{
+    QString nameClass;
+    QString implementsValue;
+    QString extendsValue;
+    QList <dataWrittenClass> nestedClasses;
+    QList <dataWrittenField> fields;
+    QList <dataWrittenMethod> methods;
+};
+
 /* Разбить программу на языке Java на элементы (классы, методы и т.д.)
  * param [in] filename имя файла, содержащего список путей к файлам программы на языке Java
 */
@@ -97,7 +130,7 @@ void deleteAnnotations(QList <QStringList> &list);
  * param [in] closeSymbol конечный символ
  * return массив, содержащий индекс строки и позиции найденного конечного символа
 */
-QList <int> findClosingSymbol(QStringList list, int startPosition, int indexBrace, QChar closeSymbol);
+QList <int> findClosingSymbol(const QStringList &list, int startPosition, int indexBrace, QChar closeSymbol);
 
 /* Привести заданный код к структурному виду
  * param [in,out] list список массивов, содержащих строки кода каждого файла на языке Java
@@ -106,17 +139,17 @@ void structuralViewOfCode(QList <QStringList> &list);
 
 /* Выделить пакеты и импорты для всех заданных файлов программы
  * param [in] list список массивов, содержащих строки кода каждого файла на языке Java
- * return список массивов, содержащих пакеты и импорты
+ * param [out] retList список массивов, содержащих пакеты и импорты
 */
-QList <QStringList> takePackageAndImports(QList <QStringList> list);
+void takePackageAndImports(const QList <QStringList> &list, QList <QStringList>& retList);
 
 /* Распарсить (разложить на поля, методы) классы заданного файла программы на языке Java
  * param [in] list массив, содержащий строки кода заданного файла на языке Java
  * param [in] namePackage название пакета заданного файла программы на языке Java
  * param [in] startPos позиция, от которой необходимо начать парсинг классов
- * param [in,out] xmlWriter класс для записи файла в формате XML
+ * param [out] dataClasses список синтаксически разложенных классов
 */
-void parsingClasses(QStringList list, QString namePackage, int startPos, QXmlStreamWriter &xmlWriter);
+void parsingClasses(const QStringList &list, QString namePackage, int startPos, QList <dataWrittenClass> &dataClasses);
 
 /* Найти позиции вхождений классов в заданном диапазоне в строках кода заданного файла программы на языке Java
  * param [in] list массив, содержащий строки кода заданного файла на языке Java
@@ -124,7 +157,7 @@ void parsingClasses(QStringList list, QString namePackage, int startPos, QXmlStr
  * param [in] end позиция, до которой необходимо закончить поиск (включительно)
  * return список позиций вхождений классов
 */
-QList <int> findClasses(QStringList list, int start, int end);
+QList <int> findClasses(const QStringList &list, int start, int end);
 
 /* Найти позиции вхождений полей в заданном диапазоне в строках кода заданного файла программы на языке Java
  * param [in] list массив, содержащий строки кода заданного файла на языке Java
@@ -132,7 +165,7 @@ QList <int> findClasses(QStringList list, int start, int end);
  * param [in] end позиция, до которой необходимо закончить поиск (включительно)
  * return список позиций вхождений полей
 */
-QList <int> findFields(QStringList list, int start, int end);
+QList <int> findFields(const QStringList &list, int start, int end);
 
 /* Найти позиции вхождений методов в заданном диапазоне в строках кода заданного файла программы на языке Java
  * param [in] list массив, содержащий строки кода заданного файла на языке Java
@@ -140,26 +173,40 @@ QList <int> findFields(QStringList list, int start, int end);
  * param [in] end позиция, до которой необходимо закончить поиск (включительно)
  * return список позиций вхождений методов
 */
-QList <int> findMethods(QStringList list, int start, int end);
+QList <int> findMethods(const QStringList &list, int start, int end);
 
 /* Распарсить (разложить каждое поле на его составляющие) поля заданного файла программы на языке Java
  * param [in] list массив, содержащий строки кода заданного файла на языке Java
  * param [in] listFields список позиций вхождений полей
  * param [in,out] xmlWriter класс для записи файла в формате XML
+ * param [out] dataFields список синтаксически разложенных полей
 */
-void parsingFields(QStringList list, QList <int> listFields, QXmlStreamWriter &xmlWriter);
+void parsingFields(const QStringList &list, QList <int> &listFields, QList <dataWrittenField> &dataFields);
 
 /* Распарсить (разложить каждый метод на его составляющие) методы заданного файла программы на языке Java
  * param [in] list массив, содержащий строки кода заданного файла на языке Java
  * param [in] listMethods список позиций вхождений методов
  * param [in,out] xmlWriter класс для записи файла в формате XML
+ * param [out] dataMethods список синтаксически разложенных методов
 */
-void parsingMethods(QStringList list, QList <int> listMethods, QXmlStreamWriter &xmlWriter);
+void parsingMethods(const QStringList &list, const QList <int> &listMethods, QList <dataWrittenMethod> &dataMethods);
 
 /* Разделить заданную строку по запятой, учитывая отсутствие запятой в строковой константе или заключения в следующих символов: {,}; <,>
  * param [in] value заданная строка
- * return список строк, разделенные по данному принципу
+ * param [out] listVal список строк, разделенные по данному принципу
 */
-QStringList correctlyBrokenByCommas(QString value);
+void correctlyBrokenByCommas(QString value, QStringList &listVal);
+
+/* Записать данные в XML формате
+ * param [in] dataXML список синтаксически разложенных классов
+ * param [in] imports список выделенных "импортов"
+*/
+void writeToXML(const QList <dataWrittenClass> &dataXML, const QStringList &imports);
+
+/* Записать данные классов в XML формате
+ * param [in] dataClass синтаксически разложенный класс
+ * param [in,out] xmlWriter класс для записи файла в формате XML
+*/
+void writeClassToXML(const dataWrittenClass &dataClass, QXmlStreamWriter &xmlWriter);
 
 #endif // MAIN_H

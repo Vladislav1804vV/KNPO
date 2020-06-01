@@ -17,84 +17,53 @@ int main(int argc, char *argv[])
 
 void JavaParssing(const char *fileName)
 {
+    //Объявить список структур для хранения найденных классов
+    QList <dataWrittenClass> dataXML;
+    //Объявить список строк для хранения выделенных "импортов"
+    QStringList imports;
     //Получить список массивов, содержащих строки кода каждого файла на языке Java
     QList <QStringList> list = getFilesArray(openAllFiles(absolutePath(fileName)));
     deleteComments(list);           //Удалить комментарии
     deleteAnnotations(list);        //Удалить аннотации
     structuralViewOfCode(list);     //Привести код к структурному виду
     //Выделить пакеты и импорты
-    QList <QStringList>  list2 = takePackageAndImports(list);
-    //Создать файл для записи данных (классов) в формате XML и определить класс для данной реализации
-    QFile file("xml.txt");
-    file.open(QIODevice::WriteOnly);
-    QXmlStreamWriter xmlWriter(&file);
-    xmlWriter.setAutoFormatting(true);
+    QList <QStringList>  list2;
+    takePackageAndImports(list, list2);
+    int count = 0;
+    QStringList strPack;
+    for(int i = 0; i < list.size(); i++)    //Для всех файлов программы определить общее кол-во классов
+    {
+        strPack << list2[i][0];
+        list2[i].removeAll("");
+        count += findClasses(list[i], list2[i].size(), list[i].size()-1).size();
+    }
+    for(int i = 0; i < list.size(); i++)    //Для всех файлов программы распарсить классы
+        parsingClasses(list[i], strPack[i], list2[i].size(), dataXML);
+    QStringList strNamePack;
+    for(int i = 0; i < list2.size(); i++)   //Для всех файлов программы определить импорты
+    {
+        int j = 0;
+        QString namePack = "";
+        //Если первая строка текущего файла непустая, сохранить её и перейти к следующей строке
+        if(list2[i][j] != "")
+        {
+            namePack = list2[i][j] + '.';
+            j++;
+        }
+        for(j; j < list2[i].size(); j++)    //Для всех строк текущего файл определить импорты
+        {
+            //Если текущий импорт не повторяет уже существующий, определить его
+            if(!strNamePack.contains(namePack + list2[i][j]))
+            {
+                //Сохранить текущий импорт в список
+                strNamePack << namePack + list2[i][j];
+                //Определить элемент программы равный названию импорта
+                imports.append(namePack + list2[i][j]);
+            }
+        }
+    }
     //Записать данные в формате XML
-        //Начать документ
-        xmlWriter.writeStartDocument();
-            //Определить корневой элемент программы
-            xmlWriter.writeStartElement("program");
-            int count = 0;
-            QStringList strPack;
-            for(int i = 0; i < list.size(); i++)    //Для всех файлов программы определить общее кол-во классов
-            {
-                strPack << list2[i][0];
-                list2[i].removeAll("");
-                count += findClasses(list[i], list2[i].size(), list[i].size()-1).size();
-            }
-            //Записать атрибут кол-ва классов
-            xmlWriter.writeAttribute("countClass", QString::number(count));
-            for(int i = 0; i < list.size(); i++)    //Для всех файлов программы распарсить классы
-            {
-                parsingClasses(list[i], strPack[i], list2[i].size(), xmlWriter);
-            }
-            //Закрыть корневой элемент программы
-            xmlWriter.writeEndElement();
-        //Закончить документ
-        xmlWriter.writeEndDocument();
-    //Закрыть файл
-    file.close();
-    //Создать файл для записи данных (импортов) в формате XML и определить класс для данной реализации
-    QFile file2("import.txt");
-    file2.open(QIODevice::WriteOnly);
-    QXmlStreamWriter xmlWriter2(&file2);
-    xmlWriter2.setAutoFormatting(true);
-    //Записать данные в формате Xml
-        //Начать документ
-        xmlWriter2.writeStartDocument();
-            //Определить корневой элемент программы
-            xmlWriter2.writeStartElement("import");
-            QStringList strNamePack;
-            for(int i = 0; i < list2.size(); i++)   //Для всех файлов программы определить импорты
-            {
-                int j = 0;
-                QString namePack = "";
-                //Если первая строка текущего файла непустая, сохранить её и перейти к следующей строке
-                if(list2[i][j] != "")
-                {
-                    namePack = list2[i][j] + '.';
-                    j++;
-                }
-                for(j; j < list2[i].size(); j++)    //Для всех строк текущего файл определить импорты
-                {
-                    //Если текущий импорт не повторяет уже существующий, определить его
-                    if(!strNamePack.contains(namePack + list2[i][j]))
-                    {
-                        //Сохранить текущий импорт в список
-                        strNamePack << namePack + list2[i][j];
-                        //Определить элемент программы равный названию импорта
-                        xmlWriter2.writeStartElement(namePack + list2[i][j]);
-                        //Закрыть элемент импорта
-                        xmlWriter2.writeEndElement();
-                    }
-                }
-            }
-            //Закрыть коревой элемент программы
-            xmlWriter2.writeEndElement();
-        //Закончить документ
-        xmlWriter2.writeEndDocument();
-    //Закрыть файл
-    file2.close();
+    writeToXML(dataXML, imports);
 }
 
 HANDLE openFile(QString fileName)
@@ -150,11 +119,12 @@ QList <HANDLE> openAllFiles(QString fileName)
             }
         //Закрыть дескриптор файла с путями к файлам программы
         CloseHandle(myFile);
-        //Если имеются пути к файлам, определить принадлежность файлов к одному проекту и вернуть список дескрипторов
+        //Если имеются пути к файлам, определить принадлежность файлов к одному проекту, если кол-во файлов больше одного и вернуть список дескрипторов
         if(list.size())
         {
-            //Определить принадлежность файлов к одному проекту
-            sameProject(list);
+            //Определить принадлежность файлов к одному проекту, если кол-во файлов больше одного
+            if(list.size() > 1)
+                sameProject(list);
             //Вернуть список дескрипторов
             return list_handle;
         }
@@ -594,7 +564,7 @@ void deleteAnnotations(QList <QStringList> &list)
 }
 
 
-QList <int> findClosingSymbol(QStringList list, int startPosition, int indexBrace, QChar closeSymbol)
+QList <int> findClosingSymbol(const QStringList &list, int startPosition, int indexBrace, QChar closeSymbol)
 {
     //Определить открывающийся символ
     QChar openSymbol = list[startPosition].at(indexBrace);
@@ -749,9 +719,8 @@ void structuralViewOfCode(QList <QStringList> &list)
     }
 }
 
-QList <QStringList> takePackageAndImports(QList <QStringList> list)
+void takePackageAndImports(const QList <QStringList> &list, QList <QStringList>& retList)
 {
-    QList <QStringList> retList;
     for(int i = 0; i < list.size(); i++) //Для всех файлов программы определить "импорты" и наличие/отсутствие пакета
     {
         QStringList strList;
@@ -773,16 +742,16 @@ QList <QStringList> takePackageAndImports(QList <QStringList> list)
         //Сохранить данные текущего файла об "импортах" и наличии/отсутствии пакета
         retList << strList;
     }
-    //Вернуть данные об "импортах" и наличии/отсутствии пакета для всех файлов программы
-    return retList;
 }
 
-void parsingClasses(QStringList list, QString namePackage, int startPos, QXmlStreamWriter &xmlWriter)
+void parsingClasses(const QStringList &list, QString namePackage, int startPos, QList <dataWrittenClass> &dataClasses)
 {
     //Определить позиции заголовков всех классов заданного файла программы
     QList <int> listClasses = findClasses(list, startPos, list.size()-1);
     for(int i = 0; i < listClasses.size(); i++) //Для все найденных классов провести их "парсинг"
     {
+        //Объявить структуру для хранения текущего класса
+        dataWrittenClass dataClass;
         //Определить строку, содержащую имя заголовка текущего класса и имя пакета при его наличии
             QString nameClass = namePackage;
             QStringList str = list[listClasses[i]].mid(list[listClasses[i]].indexOf("class")).split(" ");
@@ -793,7 +762,7 @@ void parsingClasses(QStringList list, QString namePackage, int startPos, QXmlStr
             else
                  nameClass += '.' + str[1].trimmed();
         //Определить элемент программы, содержащий все найденные классы
-        xmlWriter.writeStartElement(nameClass);
+        dataClass.nameClass = nameClass;
             //Определить наличие операторов "implements" и "extends"
                 QString strOperator = "";
                 //Если после имени класса имеется оператор, выделить строку после имени класса
@@ -802,46 +771,32 @@ void parsingClasses(QStringList list, QString namePackage, int startPos, QXmlStr
                         strOperator += str[j] + ' ';
                 //Если выделенная строка начинается оператором "implements", определить его как атрибут элемент программы
                 if(strOperator.startsWith("implements "))
-                    xmlWriter.writeAttribute("implements", strOperator.mid(QString("implements").length()+1).simplified());
+                    dataClass.implementsValue = strOperator.mid(QString("implements").length()+1).simplified();
                 //Иначе, если выделенная строка начинается оператором "extends", определить его как атрибут элемент программы
                 else if(strOperator.startsWith("extends "))
-                    xmlWriter.writeAttribute("extends", strOperator.mid(QString("extends").length()+1).simplified());
+                    dataClass.extendsValue = strOperator.mid(QString("extends").length()+1).simplified();
             //Обработать все вложенные классы
                 //Найти позиции заголовков всех вложенных классов текущего класса
                 QList <int> listClasses2 = findClasses(list, listClasses[i]+1, findClosingSymbol(list, listClasses[i]+1, 0, '}')[0]);
-                //Определить атрибут, содержащий кол-во вложенных классов
-                xmlWriter.writeAttribute("countNestedClass", QString::number(listClasses2.size()));
             //Обработать все поля текущего класса
                 //Найти позиции всех полей текущего класса заданного файла программы
                 QList <int> listFields = findFields(list, listClasses[i]+2, findClosingSymbol(list, listClasses[i]+1, 0, '}')[0]);
-                //Определить элемент программы, содержащий все найденные поля текущего класса
-                xmlWriter.writeStartElement("fields");
-                //Определить атрибут, содержащий кол-во полей текущего класса
-                xmlWriter.writeAttribute("count", QString::number(listFields.size()));
                 //"Распарсить" поля текущего класса
-                parsingFields(list, listFields, xmlWriter);
-                //Закрыть элемент программы, содержащий все найденные поля текущего класса
-                xmlWriter.writeEndElement();
+                parsingFields(list, listFields, dataClass.fields);
             //Обработать все методы текущего класса
                 //Найти позиции всех методов текущего класса заданного файла программы
                 QList <int> listMethods = findMethods(list, listClasses[i]+2, findClosingSymbol(list, listClasses[i]+1, 0, '}')[0]);
-                //Определить элемент программы, содержащий все найденные методы текущего класса
-                xmlWriter.writeStartElement("methods");
-                //Определить атрибут, содержащий кол-во методов текущего класса
-                xmlWriter.writeAttribute("count", QString::number(listMethods.size()));
                 //"Распарсить" методы текущего класса
-                parsingMethods(list, listMethods, xmlWriter);
-                //Закрыть элемент программы, содержащий все найденные методы текущего класса
-                xmlWriter.writeEndElement();
+                parsingMethods(list, listMethods, dataClass.methods);
             //Если найдены вложенные классы, "распарсить" их
             if(listClasses2.size() != 0)
-                parsingClasses(list, nameClass, listClasses[i]+1, xmlWriter);
-        //Закрыть элемент программы, содержащий все найденные классы
-        xmlWriter.writeEndElement();
+                parsingClasses(list, nameClass, listClasses[i]+1, dataClass.nestedClasses);
+            //Сохранить заполненную структуру текущего класса
+            dataClasses.append(dataClass);
     }
 }
 
-QList <int> findClasses(QStringList list, int start, int end)
+QList <int> findClasses(const QStringList &list, int start, int end)
 {
     QList <int> pos;
     for(int i = start; i <= end; i++) //Для всех строк кода заданного файла программы от заданного начала и конца определить позиции всех заголовков классов
@@ -859,7 +814,7 @@ QList <int> findClasses(QStringList list, int start, int end)
     return  pos;
 }
 
-QList <int> findFields(QStringList list, int start, int end)
+QList <int> findFields(const QStringList &list, int start, int end)
 {
     QList <int> pos;
     for(int i = start; i <= end; i++) //Для всех строк кода заданного файла программы от заданного начала и конца определить позиции всех полей
@@ -943,7 +898,7 @@ QList <int> findFields(QStringList list, int start, int end)
     return pos;
 }
 
-QList <int> findMethods(QStringList list, int start, int end)
+QList <int> findMethods(const QStringList &list, int start, int end)
 {
     QList <int> pos;
     for(int i = start; i <= end; i++)   //Для всех строк кода заданного файла программы от заданного начала и конца определить позиции всех методов
@@ -982,7 +937,7 @@ QList <int> findMethods(QStringList list, int start, int end)
     return pos;
 }
 
-void parsingFields(QStringList list, QList <int> listFields, QXmlStreamWriter &xmlWriter)
+void parsingFields(const QStringList &list, QList <int> &listFields, QList <dataWrittenField> &dataFields)
 {
     for(int j = 0; j < listFields.size()-1; j++) //Для всех заданных позиций полей, удалить повторяющиеся
         if(listFields[j] == listFields[j+1])
@@ -990,9 +945,10 @@ void parsingFields(QStringList list, QList <int> listFields, QXmlStreamWriter &x
             listFields.removeAt(j+1);
             j--;
         }
-
     for(int i = 0; i < listFields.size(); i++) //Для всех заданных позиций полей, провести их "парсинг"
     {
+        //Объявить структуру для хранения текущего поля
+        dataWrittenField dataField;
         //Создать копию текущей строки
         QString str = list[listFields[i]];
         //Вставить перед и после следующих символов: "равно", открытые и закрытые угловые, квадратные скобки, "запятая" пробельные символы
@@ -1070,12 +1026,12 @@ void parsingFields(QStringList list, QList <int> listFields, QXmlStreamWriter &x
         //Определить элемент программы равный имени поля
             //Если у поля отсутствует значение, определить элемент программы равный имени поля
             if(listStr[++pos].endsWith(";"))
-                xmlWriter.writeStartElement(listStr[pos].left(listStr[pos].length()-1));
+                dataField.nameField = listStr[pos].left(listStr[pos].length()-1);
             //Иначе, определить элемент программы равный имени поля и определить значение данного поля
             else
             {
                 //Определить элемент программы как строку текущей составляющей части разбиения
-                xmlWriter.writeStartElement(listStr[pos]);
+                dataField.nameField = listStr[pos];
                 //Считать, что значение поля присутствует
                 isValue = true;
                 //Если в одной строке определяется несколько полей, декрементировать позицию составляющих частей в разбиении
@@ -1101,7 +1057,7 @@ void parsingFields(QStringList list, QList <int> listFields, QXmlStreamWriter &x
             type = type.replace(" [ ", "[");
             type = type.replace(" ] ", "]");
             //Определить элемент программы равным типу поля
-            xmlWriter.writeAttribute("type", type + dopType);
+            dataField.typeField = type + dopType;
         //Определить модификаторы доступа и другие модификаторы поля
             //Обнулить индекс составляющих частей разбиения
             pos = 0;
@@ -1111,22 +1067,12 @@ void parsingFields(QStringList list, QList <int> listFields, QXmlStreamWriter &x
             while(listStr[pos] == "private" || listStr[pos] == "public" || listStr[pos] == "protected"
                         || listStr[pos] == "static" || listStr[pos] == "final" || listStr[pos] == "transient" || listStr[pos] == "volatile")
             {
-                //Если текущая часть разбиения строки содержит модификатор доступа, определить его, сохраняя его
+                //Если текущая часть разбиения строки содержит модификатор доступа, определить его
                 if(listStr[pos] == "private" || listStr[pos] == "public" || listStr[pos] == "protected")
-                {
-                    //Определить элемент программы равный модификатору доступа поля
-                    xmlWriter.writeAttribute("access_modifier", listStr[pos]);
-                    //Сохранить модификатор доступа для других полей, определенных на одной строке
-                    access_modifier = listStr[pos];
-                }
-                //Иначе, если текущая часть разбиения строки содержит другой модификатор, определить его, сохраняя его
+                    dataField.accessModifier = listStr[pos];
+                //Иначе, если текущая часть разбиения строки содержит другой модификатор, определить его
                 else if(listStr[pos] == "static" || listStr[pos] == "final" || listStr[pos] == "transient" || listStr[pos] == "volatile")
-                {
-                    //Определить элемент программы равный найденному модификатору поля
-                    xmlWriter.writeAttribute("modifier", listStr[pos]);
-                    //Сохранить найденный модификатор для других полей, определенных на одной строке, учитывая, что их может быть несколько
-                    modifier << listStr[pos];
-                }
+                    dataField.otherModifier.append(listStr[pos]);
                 //Инкрементировать индекс составляющих частей разбиения
                 pos++;
             }
@@ -1134,15 +1080,16 @@ void parsingFields(QStringList list, QList <int> listFields, QXmlStreamWriter &x
         if(isValue)
         {
             //Разбить выделенную строку от имени первого поля по "незакавыченным" запятым
-            QStringList listVal = correctlyBrokenByCommas(value);
+            QStringList listVal;
+            correctlyBrokenByCommas(value, listVal);
             //Если в строке определено только одно поле, определить элемент программы равный значению поля (без символа пустого оператора)
             if(listVal[0].endsWith(";"))
-                xmlWriter.writeCharacters(listVal[0].left(listVal[0].length()-1));
+                dataField.valueField = listVal[0].left(listVal[0].length()-1);
             //Иначе, если определено несколько полей, определить элемент программы равный значению поля
             else if(listVal[0] != "")
-                xmlWriter.writeCharacters(listVal[0]);
-            //Закрыть элемент программы равный значению поля
-            xmlWriter.writeEndElement();
+                dataField.valueField = listVal[0];
+            //Сохранить заполненную структуру текущего поля
+            dataFields.append(dataField);
             //Если в одной строке определено несколько полей, определить все поля с их значениями при наличии
             if(listVal.size() > 1)
                 for(int j = 1; j < listVal.size(); j++) //Для всех полей кроме первого определить поля
@@ -1172,53 +1119,50 @@ void parsingFields(QStringList list, QList <int> listFields, QXmlStreamWriter &x
                         }
                     //Если текущее поле последнее и не содержит значения, определить элемент программы как имя текущего поля (без символа пустого оператора)
                     if(listVal[j].left(listVal[j].indexOf("=")).endsWith(";"))
-                        xmlWriter.writeStartElement(listVal[j].left(listVal[j].indexOf("=")).left(listVal[j].left(listVal[j].indexOf("=")).length()-1).trimmed());
+                        dataField.nameField = listVal[j].left(listVal[j].indexOf("=")).left(listVal[j].left(listVal[j].indexOf("=")).length()-1).trimmed();
                     //Иначе, определить элемент программы как имя текущего поля
                     else
-                        xmlWriter.writeStartElement(listVal[j].left(listVal[j].indexOf("=")).trimmed());
+                        dataField.nameField = listVal[j].left(listVal[j].indexOf("=")).trimmed();
                     //Определить элемент программы равным типу текущего поля
-                    xmlWriter.writeAttribute("type", type + dopType);
-                    //Если в строке определен модификатор доступа, определить его как элемент программы
-                    if(access_modifier != "")
-                        xmlWriter.writeAttribute("access_modifier", access_modifier);
-                    for(int k = 0; k < modifier.size(); k++)    //Для всех других модификаторов определить их как элементы программы
-                        xmlWriter.writeAttribute("modifier", modifier[k]);
+                    dataField.typeField = type + dopType;
                     //Если текущее поле содержит значение, определить его как элемент программы
                     if(listVal[j].contains("="))
                     {
                         //Если текущая строка заканчивается символом пустого оператора, определить элемент программы равный значению поля (без символа пустого оператора)
                         if(listVal[j].mid(listVal[j].indexOf("=")+1).endsWith(";"))
-                            xmlWriter.writeCharacters(listVal[j].mid(listVal[j].indexOf("=")+1).left(listVal[j].mid(listVal[j].indexOf("=")+1).length()-1));
+                            dataField.valueField = listVal[j].mid(listVal[j].indexOf("=")+1).left(listVal[j].mid(listVal[j].indexOf("=")+1).length()-1);
                         //Иначе, определить элемент программы равный значению поля
                         else
-                            xmlWriter.writeCharacters(listVal[j].mid(listVal[j].indexOf("=")+1));
+                            dataField.valueField = listVal[j].mid(listVal[j].indexOf("=")+1);
                     }
-                    //Закрыть элемент программы равный имени текущего поля
-                    xmlWriter.writeEndElement();
+                    //Сохранить заполненную структуру текущего поля
+                    dataFields.append(dataField);
                 }
         }
-        //Иначе, закрыть элемент программы равный имени первого поля
+        //Иначе, сохранить заполненную структуру текущего поля
         else
-            xmlWriter.writeEndElement();
+            dataFields.append(dataField);
     }
 }
 
-void parsingMethods(QStringList list, QList <int> listMethods, QXmlStreamWriter &xmlWriter)
+void parsingMethods(const QStringList &list, const QList <int> &listMethods, QList <dataWrittenMethod> &dataMethods)
 {
     for(int i = 0; i < listMethods.size(); i++) //Для всех заданных методов, провести их "парсинг"
     {
+        //Объявить структуру для хранения текущего метода
+        dataWrittenMethod dataMethod;
         //Если текущий метод начинается открывающейся фигурной скобкой, считать, что это блок-инициализации
         if(list[listMethods[i]] == '{')
         {
-            //Определить элемент программы как имя для блока-инициализации
-            xmlWriter.writeStartElement("initialization-block");
+            //Обозначить, что текущий метод является блоком инициализации
+            dataMethod.isInitializationBlock = true;
             //Считать блок-инициализации нестатическим
             QString modifier = "non-static";
             //Если перед началом тела блока-инициализации содержится модификатор "static", считать блок-инициализации статическим
             if(list[listMethods[i]-1] == "static")
                 modifier = "static";
             //Определить атрибут программы как тип блока-инициализации
-            xmlWriter.writeAttribute("type", modifier);
+            dataMethod.typeInitializationBlock = modifier;
             //Найти конец тела блока-инициализации
             int posEnd = findClosingSymbol(list, listMethods[i], 0, '}')[0];
             QStringList listValue;
@@ -1227,9 +1171,9 @@ void parsingMethods(QStringList list, QList <int> listMethods, QXmlStreamWriter 
             //Склеить строки списка символом переноса строки
             QString value = listValue.join("\n");
             //Определить элемент программы равным значению блока-инициализации
-            xmlWriter.writeCharacters(value);
-            //Закрыть элемент программы равный имени для блока-инициализации
-            xmlWriter.writeEndElement();
+            dataMethod.valueInitializationBlock = value;
+            //Сохранить заполненную структуру текущего метода
+            dataMethods.append(dataMethod);
             //Перейти к следующей итерации цикла
             continue;
         }
@@ -1300,15 +1244,13 @@ void parsingMethods(QStringList list, QList <int> listMethods, QXmlStreamWriter 
             if(listStr[pos+1] != "(")
             {
                 //Определить элемент программы равный имени метода
-                xmlWriter.writeStartElement(listStr[pos+1]);
+                dataMethod.nameMethod = listStr[pos+1];
                 //Определить атрибут программы равный типу метода
-                xmlWriter.writeAttribute("type", type);
+                dataMethod.typeMethod = type;
             }
             //Иначе, если последующая составляющая часть в разбиении равна открывающейся круглой скобке, определить элемент программы равный имени метода
             else if(listStr[pos+1] == "(")
-            {
-                xmlWriter.writeStartElement(listStr[pos]);
-            }
+                dataMethod.nameMethod = listStr[pos];
         //Определить модификаторы доступа и другие модификаторы поля
             //Обнулить индекс составляющих частей разбиения
             pos = 0;
@@ -1318,14 +1260,10 @@ void parsingMethods(QStringList list, QList <int> listMethods, QXmlStreamWriter 
             {
                 //Если текущая часть разбиения строки содержит модификатор доступа, определить его
                 if(listStr[pos] == "private" || listStr[pos] == "public" || listStr[pos] == "protected")
-                {
-                    xmlWriter.writeAttribute("access_modifier", listStr[pos]);
-                }
+                    dataMethod.accessModifier = listStr[pos];
                 //Иначе, если текущая часть разбиения строки содержит другой модификатор, определить его
                 else if(listStr[pos] == "static" || listStr[pos] == "final" || listStr[pos] == "abstract" || listStr[pos] == "synchronized")
-                {
-                    xmlWriter.writeAttribute("modifier", listStr[pos]);
-                }
+                    dataMethod.otherModifier.append(listStr[pos]);
                 //Инкрементировать индекс составляющих частей разбиения
                 pos++;
             }
@@ -1337,15 +1275,16 @@ void parsingMethods(QStringList list, QList <int> listMethods, QXmlStreamWriter 
             //Выделить строку с параметрами метода
             QString strParam = list[listMethods[i]].mid(posStartParam+1, posEndParam-posStartParam-1).simplified();
             //Разбить строку на отдельные параметры метода
-            QStringList param = correctlyBrokenByCommas(strParam);
+            QStringList param;
+            correctlyBrokenByCommas(strParam, param);
             for(int j = 0; j < param.size(); j++)   //Для всех параметров метода определить их как атрибуты элемента программы
-                xmlWriter.writeAttribute("param", param[j].simplified());
+                dataMethod.parameters.append(param[j].simplified());
         //Определить наличие оператора "throws" у метода
             //Выделить строку после параметров метода
             QString strThrows = list[listMethods[i]].mid(posEndParam+1).simplified();
             //Если выделенная строка начинается оператором "throws", определить его как атрибут элемента программы
             if(strThrows.startsWith("throws "))
-                xmlWriter.writeAttribute("throws", strThrows.mid(QString("throws").length()+1));
+                dataMethod.throwsValue = strThrows.mid(QString("throws").length()+1);
         //Определить тело метода
             //Если заголовок метода не является прототипом, найти начало и конец метода, определив его
             if(!list[listMethods[i]].endsWith(";"))
@@ -1358,14 +1297,14 @@ void parsingMethods(QStringList list, QList <int> listMethods, QXmlStreamWriter 
                 //Склеить сохраненные строки символом переноса новой строки
                 QString value = listValue.join("\n");
                 //Определить тело метода как значение элемента программы
-                xmlWriter.writeCharacters(value);
+                dataMethod.valueMethod = value;
             }
-        //Закрыть элемент программы равный имени метода
-        xmlWriter.writeEndElement();
+        //Сохранить заполненную структуру текущего метода
+        dataMethods.append(dataMethod);
     }
 }
 
-QStringList correctlyBrokenByCommas(QString value)
+void correctlyBrokenByCommas(QString value, QStringList &listVal)
 {
     //Вставить перед открывающимися фигурными и угловыми скобками открывающиеся круглые скобки и после соответствующие круглые скобки
     value = value.replace("{", "({");
@@ -1392,7 +1331,135 @@ QStringList correctlyBrokenByCommas(QString value)
     value = value.replace("(<", "<");
     value = value.replace(">)", ">");
     //Разбить строку по запятой с символом переноса новой строки
-    QStringList listVal = value.split(",\n");
-    //Вернуть список разбитых строк
-    return listVal;
+    listVal = value.split(",\n");
+}
+
+void writeToXML(const QList <dataWrittenClass> &dataXML, const QStringList &imports)
+{
+    //Создать файл для записи данных (классов) в формате XML и определить класс для данной реализации
+    QFile file("xml.txt");
+    file.open(QIODevice::WriteOnly);
+    QXmlStreamWriter xmlWriter(&file);
+    xmlWriter.setAutoFormatting(true);
+    //Записать данные в формате XML
+        //Начать документ
+        xmlWriter.writeStartDocument();
+            //Определить корневой элемент программы
+            xmlWriter.writeStartElement("program");
+            //Записать атрибут кол-ва классов
+            xmlWriter.writeAttribute("countClass", QString::number(dataXML.size()));
+            for(int i = 0; i < dataXML.size(); i++) //Для всех синтаксически разложенных классов записать их в формате XML
+                writeClassToXML(dataXML[i], xmlWriter);
+            //Закрыть корневой элемент программы
+            xmlWriter.writeEndElement();
+        //Закончить документ
+        xmlWriter.writeEndDocument();
+    //Закрыть файл
+    file.close();
+    //Создать файл для записи данных (импортов) в формате XML и определить класс для данной реализации
+    QFile file2("imports.txt");
+    file2.open(QIODevice::WriteOnly);
+    QXmlStreamWriter xmlWriter2(&file2);
+    xmlWriter2.setAutoFormatting(true);
+    //Записать данные в формате XML
+        //Начать документ
+        xmlWriter2.writeStartDocument();
+            //Определить корневой элемент программы
+            xmlWriter2.writeStartElement("import");
+            for(int i = 0; i < imports.size(); i++) //Для всех выделенных "импортов" записать их в формате XML
+            {
+                //Определить элемент программы равный названию импорта
+                xmlWriter2.writeStartElement(imports[i]);
+                //Закрыть элемент импорта
+                xmlWriter2.writeEndElement();
+            }
+            //Закрыть коревой элемент программы
+            xmlWriter2.writeEndElement();
+        //Закончить документ
+        xmlWriter2.writeEndDocument();
+    //Закрыть файл
+    file2.close();
+}
+
+void writeClassToXML(const dataWrittenClass &dataClass, QXmlStreamWriter &xmlWriter)
+{
+    //Определить элемент программы, содержащий все найденные классы
+    xmlWriter.writeStartElement(dataClass.nameClass);
+    //Если поле "implements" непустое, определить его как атрибут элемент программы
+    if(!dataClass.implementsValue.isNull())
+        xmlWriter.writeAttribute("implements", dataClass.implementsValue);
+    //Иначе, если поле "extends" непустое, определить его как атрибут элемент программы
+    else if(!dataClass.extendsValue.isNull())
+        xmlWriter.writeAttribute("extends", dataClass.extendsValue);
+    //Определить атрибут, содержащий кол-во вложенных классов
+    xmlWriter.writeAttribute("countNestedClass", QString::number(dataClass.nestedClasses.size()));
+    //Определить элемент программы, содержащий все найденные поля текущего класса
+    xmlWriter.writeStartElement("fields");
+    //Определить атрибут, содержащий кол-во полей текущего класса
+    xmlWriter.writeAttribute("count", QString::number(dataClass.fields.size()));
+    for(int j = 0; j < dataClass.fields.size(); j++)    //Для всех синтаксически разложенных полей определить их составляющие
+    {
+        //Определить элемент программы равный имени поля
+        xmlWriter.writeStartElement(dataClass.fields[j].nameField);
+        //Определить элемент программы равным типу поля
+        xmlWriter.writeAttribute("type", dataClass.fields[j].typeField);
+        //Определить элементы программы равные модификатору доступа поля и всем другим модификаторам
+            //Если в строке определен модификатор доступа, определить его как элемент программы
+            if(!dataClass.fields[j].accessModifier.isNull())
+                xmlWriter.writeAttribute("access_modifier", dataClass.fields[j].accessModifier);
+            for(int k = 0; k < dataClass.fields[j].otherModifier.size(); k++)   //Для всех других модификаторов провести их определение
+                xmlWriter.writeAttribute("modifier", dataClass.fields[j].otherModifier[k]);
+        //Определить элемент программы равный значению поля (без символа пустого оператора)
+        xmlWriter.writeCharacters(dataClass.fields[j].valueField);
+        //Закрыть элемент программы равный значению поля
+        xmlWriter.writeEndElement();
+    }
+    //Закрыть элемент программы, содержащий все найденные поля текущего класса
+    xmlWriter.writeEndElement();
+    //Определить элемент программы, содержащий все найденные методы текущего класса
+    xmlWriter.writeStartElement("methods");
+    //Определить атрибут, содержащий кол-во методов текущего класса
+    xmlWriter.writeAttribute("count", QString::number(dataClass.methods.size()));
+    for(int j = 0; j < dataClass.methods.size(); j++)   //Для всех синтаксически разложенных методов определить их составляющие
+    {
+        //Если текущий метод является блоком инициализации, определить его и перейти на следующую итерацию
+        if(dataClass.methods[j].isInitializationBlock)
+        {
+            //Определить элемент программы как имя для блока-инициализации
+            xmlWriter.writeStartElement("initialization-block");
+            //Определить атрибут программы как тип блока-инициализации
+            xmlWriter.writeAttribute("type", dataClass.methods[j].typeInitializationBlock);
+            //Определить элемент программы равным значению блока-инициализации
+            xmlWriter.writeCharacters(dataClass.methods[j].valueInitializationBlock);
+            //Закрыть элемент программы равный имени для блока-инициализации
+            xmlWriter.writeEndElement();
+            continue;
+        }
+        //Определить элемент программы равный имени метода
+        xmlWriter.writeStartElement(dataClass.methods[j].nameMethod);
+        //Определить атрибут программы равный типу метода
+        if(!dataClass.methods[j].typeMethod.isNull())
+            xmlWriter.writeAttribute("type", dataClass.methods[j].typeMethod);
+        //Определить элементы программы равные модификатору доступа поля и всем другим модификаторам
+            //Если в строке определен модификатор доступа, определить его как элемент программы
+            if(!dataClass.methods[j].accessModifier.isNull())
+                xmlWriter.writeAttribute("access_modifier", dataClass.methods[j].accessModifier);
+            for(int k = 0; k < dataClass.methods[j].otherModifier.size(); k++)  //Для всех других модификаторов провести их определение
+                xmlWriter.writeAttribute("modifier", dataClass.methods[j].otherModifier[k]);
+        for(int k = 0; k < dataClass.methods[j].parameters.size(); k++)   //Для всех параметров метода определить их как атрибуты элемента программы
+            xmlWriter.writeAttribute("param", dataClass.methods[j].parameters[k]);
+        //Если в строке определен оператор "throws", определить его как атрибут элемента программы
+        if(!dataClass.methods[j].throwsValue.isNull())
+            xmlWriter.writeAttribute("throws", dataClass.methods[j].throwsValue);
+        //Определить тело метода как значение элемента программы
+        xmlWriter.writeCharacters(dataClass.methods[j].valueMethod);
+        //Закрыть элемент программы равный имени метода
+        xmlWriter.writeEndElement();
+    }
+    //Закрыть элемент программы, содержащий все найденные методы текущего класса
+    xmlWriter.writeEndElement();
+    for(int j = 0; j < dataClass.nestedClasses.size(); j++) //Для всех найденных вложенных классов провести их "парсинг"
+        writeClassToXML(dataClass.nestedClasses[j], xmlWriter);
+    //Закрыть элемент программы, содержащий все найденные классы
+    xmlWriter.writeEndElement();
 }
