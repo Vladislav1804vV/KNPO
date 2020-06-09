@@ -5,13 +5,34 @@ int main(int argc, char *argv[])
 {
     QCoreApplication a(argc, argv);
 
-    //Если количество переданных аргументов командной строки, выполнить функцию, чтобы разбить программу на языке Java на элементы (классы, методы и т.д.)
-    if(argc > 1)
+    //Если количество переданных аргументов командной строки меньше трех, выполнить функцию, чтобы разбить программу на языке Java на элементы (классы, методы и т.д.)
+    if(argc == 2 && argv[1] != QString("-test"))
+    {
         JavaParssing(argv[1]);
+        printf("Done\n");
+        _getch();
+    }
+    //Иначе, если третий аргумаент командной строки равен "-test", выполнить тестирование функций программы
+    else if(argc == 2 && argv[1] == QString("-test"))
+    {
+        Test_findClasses findClasses;
+        Test_findFields findFields;
+        Test_findMethods findMethods;
+        Test_parsingClasses parsingClasses;
+        Test_parsingFields parsingFields;
+        Test_parsingMethods parsingMethods;
 
-    printf("Done");
+        QTest::qExec(&findClasses);
+        QTest::qExec(&findFields);
+        QTest::qExec(&findMethods);
+        QTest::qExec(&parsingClasses);
+        QTest::qExec(&parsingFields);
+        QTest::qExec(&parsingMethods);
+    }
+    else
+        errorMessage("invalid request");
 
-    return a.exec();
+    return 0;
 }
 
 
@@ -588,7 +609,7 @@ QList <int> findClosingSymbol(const QStringList &list, int startPosition, int in
                 //Определить индекс текущего символа закрытия
                 indexClose += list[i].mid(indexClose).indexOf(closeSymbol);
                 //Если индекс текущей строки равен заданному индексу, выделить подстроку между индексом открытого и закрытого символов (не включая их)
-                if(i == startPosition)
+                if(list[i].count() > 1)
                     spaceStr = list[i].mid(indexOpen + 1, indexClose - indexOpen - 1);
                 //Иначе, выделить подстроку между индексом открытого и закрытого символов (не включая индекс закрытого)
                 else
@@ -598,7 +619,7 @@ QList <int> findClosingSymbol(const QStringList &list, int startPosition, int in
                 for(int k = 0; k < sizeOpen; k++)   //Для каждого найденного символа открытия определить его "закавыченность"
                 {
                     //Определить индекс текущего символа открытия
-                    indexOpen += spaceStr.mid(indexOpen).indexOf(openSymbol);
+                    indexOpen += list[i].mid(indexOpen+1).indexOf(openSymbol);
                     //Если индекс текущей строки равен заданному индексу, инкрементировать индекс открытого символа
                     if(i == startPosition)
                         indexOpen++;
@@ -986,7 +1007,7 @@ void parsingFields(const QStringList &list, QList <int> &listFields, QList <data
         if(listStr[pos+1] == '<')
         {
             //Определить позицию закрывающейся угловой скобки
-            pos = findClosingSymbol(listStr, pos + 2, 0, '>')[0];
+            pos = findClosingSymbol(listStr, pos + 1, 0, '>')[0];
             //Сохранить позицию конца типа поля как позиция найденной закрывающейся угловой скобки
             posEndType = pos;
         }
@@ -1051,11 +1072,12 @@ void parsingFields(const QStringList &list, QList <int> &listFields, QList <data
             for(int j = posStartType; j <= posEndType; j++) //Для всех составляющих частей разбиения от индекса начала типа до индекса конца типа, склеить составляющие части
                 type += listStr[j] + " ";
             //Вернуть склеенную  строку к первоначальному виду, удалив вставленные пробельные символы
-            type = type.simplified();
             type = type.replace(" < ", "<");
             type = type.replace(" > ", ">");
             type = type.replace(" [ ", "[");
             type = type.replace(" ] ", "]");
+            type = type.replace(" , ", ",");
+            type = type.simplified();
             //Определить элемент программы равным типу поля
             dataField.typeField = type + dopType;
         //Определить модификаторы доступа и другие модификаторы поля
@@ -1213,7 +1235,7 @@ void parsingMethods(const QStringList &list, const QList <int> &listMethods, QLi
         if(listStr[pos+1] == '<')
         {
             //Определить позицию закрывающейся угловой скобки
-            pos = findClosingSymbol(listStr, pos + 2, 0, '>')[0];
+            pos = findClosingSymbol(listStr, pos + 1, 0, '>')[0];
             //Сохранить позицию конца типа поля как позиция найденной закрывающейся угловой скобки
             posEndType = pos;
         }
@@ -1235,11 +1257,12 @@ void parsingMethods(const QStringList &list, const QList <int> &listMethods, QLi
             for(int j = posStartType; j <= posEndType; j++) //Для всех составляющих частей разбиения от индекса начала типа до индекса конца типа, склеить составляющие части
                 type += listStr[j] + " ";
             //Вернуть склеенную  строку к первоначальному виду, удалив вставленные пробельные символы
-            type = type.simplified();
             type = type.replace(" < ", "<");
             type = type.replace(" > ", ">");
             type = type.replace(" [ ", "[");
             type = type.replace(" ] ", "]");
+            type = type.replace(" , ", ",");
+            type = type.simplified();
             //Если последующая составляющая часть в разбиении не равна открывающейся круглой скобке, определить элемент и атрибут программы
             if(listStr[pos+1] != "(")
             {

@@ -11,6 +11,27 @@
 #include <QList>
 #include <conio.h>
 #include <QXmlStreamWriter>
+#include <QtTest/QtTest>
+
+#include "test_findclasses.h"
+#include "test_findfields.h"
+#include "test_findmethods.h"
+#include "test_parsingclasses.h"
+#include "test_parsingfields.h"
+#include "test_parsingmethods.h"
+
+struct dataWrittenClass;
+struct dataWrittenField;
+struct dataWrittenMethod;
+
+typedef QList<int> ListInt;
+typedef QList <dataWrittenClass> dataClass;
+typedef QList <dataWrittenField> dataField;
+typedef QList <dataWrittenMethod> dataMethod;
+Q_DECLARE_METATYPE(ListInt)
+Q_DECLARE_METATYPE(dataClass)
+Q_DECLARE_METATYPE(dataField)
+Q_DECLARE_METATYPE(dataMethod)
 
 using namespace std;
 

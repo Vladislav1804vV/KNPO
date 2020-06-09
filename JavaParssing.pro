@@ -1,4 +1,5 @@
 QT -= gui
+QT += testlib
 
 CONFIG += c++11 console
 CONFIG -= app_bundle
@@ -15,7 +16,13 @@ DEFINES += QT_DEPRECATED_WARNINGS
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
-        main.cpp
+        main.cpp \
+        test_findclasses.cpp \
+        test_findfields.cpp \
+        test_findmethods.cpp \
+        test_parsingclasses.cpp \
+        test_parsingfields.cpp \
+        test_parsingmethods.cpp
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
@@ -23,4 +30,10 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
 
 HEADERS += \
-    main.h
+    main.h \
+    test_findclasses.h \
+    test_findfields.h \
+    test_findmethods.h \
+    test_parsingclasses.h \
+    test_parsingfields.h \
+    test_parsingmethods.h
