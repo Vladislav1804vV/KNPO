@@ -1,3 +1,7 @@
+/*!
+ * \file test_parsingclasses.cpp
+ * \brief файл, содержащий реализацию тестирующего класса функции parsingClasses
+*/
 #include "test_parsingclasses.h"
 
 Test_parsingClasses::Test_parsingClasses()

@@ -1,3 +1,7 @@
+/*!
+ * \file test_parsingfields.cpp
+ * \brief файл, содержащий реализацию тестирующего класса функции parsingFields
+*/
 #include "test_parsingfields.h"
 
 Test_parsingFields::Test_parsingFields()

@@ -1,3 +1,7 @@
+/*!
+ * \file test_findmethods.cpp
+ * \brief файл, содержащий реализацию тестирующего класса функции findMethods
+*/
 #include "test_findmethods.h"
 
 Test_findMethods::Test_findMethods()

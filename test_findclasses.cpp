@@ -1,3 +1,7 @@
+/*!
+ * \file test_findclasses.cpp
+ * \brief файл, содержащий реализацию тестирующего класса функции findClasses
+*/
 #include "test_findclasses.h"
 
 Test_findClasses::Test_findClasses()

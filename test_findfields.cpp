@@ -1,3 +1,7 @@
+/*!
+ * \file test_findfields.cpp
+ * \brief файл, содержащий реализацию тестирующего класса функции findFields
+*/
 #include "test_findfields.h"
 
 Test_findFields::Test_findFields()

@@ -1,3 +1,7 @@
+/*!
+ * \file test_parsingmethods.cpp
+ * \brief файл, содержащий реализацию тестирующего класса функции parsingMethods
+*/
 #include "test_parsingmethods.h"
 
 Test_parsingMethods::Test_parsingMethods()
