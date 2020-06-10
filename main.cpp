@@ -14,14 +14,14 @@ int main(int argc, char *argv[])
 {
     QCoreApplication a(argc, argv);
 
-    //Если количество переданных аргументов командной строки меньше трех, выполнить функцию, чтобы разбить программу на языке Java на элементы (классы, методы и т.д.)
+    //Если второй аргумент командной строки не равен ключу "-test", выполнить функцию, чтобы разбить программу на языке Java на элементы (классы, методы и т.д.)
     if(argc == 2 && argv[1] != QString("-test"))
     {
         JavaParssing(argv[1]);
         printf("Done\n");
         _getch();
     }
-    //Иначе, если третий аргумаент командной строки равен "-test", выполнить тестирование функций программы
+    //Иначе, если второй аргумент командной строки равен ключу "-test", выполнить тестирование функций программы
     else if(argc == 2 && argv[1] == QString("-test"))
     {
         Test_findClasses findClasses;
@@ -38,6 +38,7 @@ int main(int argc, char *argv[])
         QTest::qExec(&parsingFields);
         QTest::qExec(&parsingMethods);
     }
+    //Иначе, выдать сообщение о введении неверного запроса
     else
         errorMessage("invalid request");
 
@@ -99,7 +100,7 @@ void JavaParssing(const char *fileName)
 HANDLE openFile(QString fileName)
 {
     //Получить дескриптор открытого файла
-    HANDLE myFile = CreateFileA(fileName.toStdString().c_str(), GENERIC_READ, NULL, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    HANDLE myFile = CreateFileA(fileName.toLocal8Bit(), GENERIC_READ, NULL, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     //Вернуть дескриптор открытого файла
     return myFile;
 }
@@ -107,7 +108,7 @@ HANDLE openFile(QString fileName)
 QList <HANDLE> openAllFiles(QString fileName)
 {
     //Получить дескриптор открытого файла
-    HANDLE myFile = CreateFileA(fileName.toStdString().c_str(), GENERIC_READ, NULL, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    HANDLE myFile = CreateFileA(fileName.toLocal8Bit(), GENERIC_READ, NULL, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     //Если дескриптор получен, получить заданные пути в файле и дескрипторы файлов по данным путям
     if(myFile != INVALID_HANDLE_VALUE)
     {
