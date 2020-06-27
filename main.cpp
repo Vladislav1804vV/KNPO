@@ -38,6 +38,15 @@ int main(int argc, char *argv[])
         QTest::qExec(&parsingFields);
         QTest::qExec(&parsingMethods);
     }
+    //Иначе, если дополнительных аргументов объявлено не было, сделать запрос аргумента у пользователя
+    else if(argc == 1)
+    {
+        char path[100] = "";
+        gets(path);
+        JavaParssing(path);
+        printf("Done\n");
+        _getch();
+    }
     //Иначе, выдать сообщение о введении неверного запроса
     else
         errorMessage("invalid request");
@@ -54,6 +63,9 @@ void JavaParssing(const char *fileName)
     QStringList imports;
     //Получить список массивов, содержащих строки кода каждого файла на языке Java
     QList <QStringList> list = getFilesArray(openAllFiles(absolutePath(fileName)));
+    for(int i = 0; i < list.size(); i++)
+        if(list[i].isEmpty())
+            list.removeAt(i);
     deleteComments(list);           //Удалить комментарии
     deleteAnnotations(list);        //Удалить аннотации
     structuralViewOfCode(list);     //Привести код к структурному виду
@@ -76,7 +88,7 @@ void JavaParssing(const char *fileName)
         int j = 0;
         QString namePack = "";
         //Если первая строка текущего файла непустая, сохранить её и перейти к следующей строке
-        if(list2[i][j] != "")
+        if(!list2[i].isEmpty() && list2[i][j] != "")
         {
             namePack = list2[i][j] + '.';
             j++;
@@ -198,7 +210,7 @@ void fileExtensionJava(QString path)
     //Определить позицию последнего вхождения символа '.' в заданном пути
     int point = path.lastIndexOf('.');
     //Если символ '.' найден, проверить строку на соответствующее вхождение
-    if (point != NULL)
+    if (point != -1)
     {
         //Если строка после вхождения не соответствует расширению языка Java, объявить ошибку непринадлежности файла к языку Java
         if(path.mid(point) != ".java")
